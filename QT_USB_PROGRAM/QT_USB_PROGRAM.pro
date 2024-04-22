@@ -24,11 +24,13 @@ INCLUDEPATH += 3rdparty/
 
 SOURCES += \
         main.cpp \
-        mainwindow.cpp
+        mainwindow.cpp \
+        usbcomm.cpp
         usbcomm.cpp
 
 HEADERS += \
-        mainwindow.h
+        mainwindow.h \
+        usbcomm.h
         usbcomm.h
 
 FORMS += \

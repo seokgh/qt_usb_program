@@ -1,52 +1,41 @@
-/****************************************************************************
-*
-* Copyright (C) 2021-2022 MiaoQingrui. All rights reserved.
-* Author: 缪庆瑞 <justdoit_mqr@163.com>
-*
-****************************************************************************/
-/*
- *@author:  缪庆瑞
- *@date:    2021.03.15
- *@brief:   USB应用层通信组件(对libusb的api接口进行二次封装，方便使用)
- */
+/********************************************************************************/
+/* USB "응용레이어" 통신 파트 (libusb API 에 한층 더 씌워서, 사용 편의성을 높인다) */
+/********************************************************************************/
 #include "usbcomm.h"
 #include <QDebug>
 #include <QCoreApplication>
 
-/*
- *@brief:   构造函数，负责对libusb进行初始化
- *@author:  缪庆瑞
- *@date:    2021.03.15
- */
+/********************************************************************************/
+/* 생성자 함수，libusb에 대해 초기화작업을 실시한다. */
+/********************************************************************************/
 UsbComm::UsbComm(QObject *parent)
     : QObject(parent)
 {
-    //成员变量初始化
     context = NULL;
-    //libusb初始化
+
+    /* libusb 초기화 */
     int err = libusb_init(&context);
-    if(err != LIBUSB_SUCCESS)
-    {
+    if(err != LIBUSB_SUCCESS) {
         qDebug()<<"libusb_init error:"<<libusb_error_name(err);
     }
-    //设置日志输出等级
-    libusb_set_debug(context,LIBUSB_LOG_LEVEL_WARNING);//旧版本
-    //libusb_set_option(context,LIBUSB_OPTION_LOG_LEVEL,LIBUSB_LOG_LEVEL_WARNING);//新版本
+
+    /* log level 설정 */
+    libusb_set_debug(context, LIBUSB_LOG_LEVEL_WARNING); //old ver
+    //libusb_set_option(context,LIBUSB_OPTION_LOG_LEVEL,LIBUSB_LOG_LEVEL_WARNING);	//new ver
 }
-/*
- *@brief:   析构函数，负责对libusb进行资源释放
- *@author:  缪庆瑞
- *@date:    2021.03.15
- */
+
+/********************************************************************************/
+/* 소멸자 함수，libusb에 대해 De-init작업을 실시한다. */
+/********************************************************************************/
 UsbComm::~UsbComm()
 {
-    closeAllUsbDevice();//关闭所有打开的设备
+    //关闭所有打开的设备
+    closeAllUsbDevice();
     libusb_exit(context);//libusb退出
 }
+
 /*
  *@brief:   探测系统当前接入的usb设备，打印设备详细信息(调试用)
- *@author:  缪庆瑞
- *@date:    2021.03.15
  */
 void UsbComm::findUsbDevices()
 {
@@ -68,8 +57,6 @@ void UsbComm::findUsbDevices()
  * 仅返回第一个设备句柄，所以并不打算在真正的应用程序中使用该函数。
  * 注2：打开设备需要权限，普通用户可能会返回“LIBUSB_ERROR_ACCESS”，可以在udev规则中给指定的usb设备授予读写权限(MODE="0666"),
  * 详情请查询udev规则脚本相关资料
- *@author:  缪庆瑞
- *@date:    2022.02.22
  *@param:   vpidMap:<厂商id,产品id>表
  *@return:   bool:true=成功  false=失败
  */
@@ -120,12 +107,10 @@ bool UsbComm::openUsbDevice(QMultiMap<quint16, quint16> &vpidMap)
 
     return (bool)deviceHandleList.size();
 }
-/*
- *@brief:   关闭指定设备
- *@author:  缪庆瑞
- *@date:    2022.02.22
- *@param:   deviceHandle:设备句柄
- */
+
+/********************************************************************************/
+/* 지정 usb device 닫기 */
+/********************************************************************************/
 void UsbComm::closeUsbDevice(libusb_device_handle *deviceHandle)
 {
     //释放设备声明的所有接口
@@ -137,11 +122,10 @@ void UsbComm::closeUsbDevice(libusb_device_handle *deviceHandle)
         deviceHandleList.removeAll(deviceHandle);
     }
 }
-/*
- *@brief:   关闭所有usb设备
- *@author:  缪庆瑞
- *@date:    2022.02.22
- */
+
+/********************************************************************************/
+/* 모든 device 닫기 */
+/********************************************************************************/
 void UsbComm::closeAllUsbDevice()
 {
     for(int i=0;i<deviceHandleList.size();i++)
@@ -151,8 +135,6 @@ void UsbComm::closeAllUsbDevice()
 }
 /*
  *@brief:   激活usb设备当前配置(通常对于只有一个配置的设备，默认已经激活，无需调用)
- *@author:  缪庆瑞
- *@date:    2022.02.22
  *@param:   deviceHandle:设备句柄
  *@param:   bConfigurationValue:配置号
  *@return:   bool:true=成功  false=失败
@@ -178,8 +160,6 @@ bool UsbComm::setUsbConfig(libusb_device_handle *deviceHandle, int bConfiguratio
 /*
  *@brief:   声明usb设备接口
  * 在操作I/O或其他端点的时候必须先声明接口，接口声明用于告知底层操作系统你的程序想要取得此接口的所有权。
- *@author:  缪庆瑞
- *@date:    2022.02.22
  *@param:   deviceHandle:设备句柄
  *@param:   interfaceNumber:接口号
  *@return:   bool:true=成功  false=失败
@@ -231,8 +211,6 @@ bool UsbComm::claimUsbInterface(libusb_device_handle *deviceHandle, int interfac
 }
 /*
  *@brief:   释放usb设备声明的接口
- *@author:  缪庆瑞
- *@date:    2022.02.22
  *@param:   deviceHandle:设备句柄
  *@param:   interfaceNumber:要释放的接口号，-1表示释放当前所有生命过的接口
  */
@@ -271,8 +249,6 @@ void UsbComm::releaseUsbInterface(libusb_device_handle *deviceHandle,int interfa
 /*
  *@brief:   激活usb设备接口备用设置(通常对于只有一个备用设置的接口，默认已经激活，无需调用)
  * 该函数调用之前需要先声明接口。
- *@author:  缪庆瑞
- *@date:    2022.02.24
  *@param:   deviceHandle:设备句柄
  *@param:   interfaceNumber:接口号
  *@param:   bAlternateSetting:备用设置
@@ -306,8 +282,6 @@ bool UsbComm::setUsbInterfaceAltSetting(libusb_device_handle *deviceHandle, int 
  * 重新初始化设备，重置完成后，系统将尝试恢复之前的配置和备用设置。
  * 如果该函数返回false，则表明重置可能失败，外部需要重新调用查询方法获取设备句柄，因为有可能句柄已经被关闭了
  * 需要重新打开设备遍历寻找。
- *@author:  缪庆瑞
- *@date:    2022.02.24
  *@param:   deviceHandle:设备句柄
  *@return:   bool:true=成功  false=失败
  */
@@ -335,8 +309,6 @@ bool UsbComm::resetUsbDevice(libusb_device_handle *deviceHandle)
 }
 /*
  *@brief:   (批量(块)传输)
- *@author:  缪庆瑞
- *@date:    2022.02.22
  *@param:   deviceHandle:设备句柄
  *@param:   endpoint:端点,bit0:3表示端点地址，bit4:6为保留位，bit7表示方向(1=In: device-to-host  0=Out:host-to-device)
  *@param:   data:输入/输出数据buffer指针，内存空间要在外部申请好
@@ -371,8 +343,6 @@ int UsbComm::bulkTransfer(libusb_device_handle *deviceHandle, quint8 endpoint,
 }
 /*
  *@brief:   通过索引获取打开的设备句柄
- *@author:  缪庆瑞
- *@date:    2022.02.22
  *@param:   index:索引号
  *@return:   libusb_device_handle:设备句柄
  */
@@ -386,8 +356,6 @@ libusb_device_handle *UsbComm::getDeviceHandleFromIndex(int index)
 }
 /*
  *@brief:   通过vpid和端口号获取打开的设备句柄
- *@author:  缪庆瑞
- *@date:    2022.02.22
  *@param:   vid:厂商id
  *@param:   pid:产品id
  *@param:   port:端口号(通常是与硬件接口绑定的，可通过dmesg查看)，-1表示不匹配端口
@@ -425,8 +393,6 @@ libusb_device_handle *UsbComm::getDeviceHandleFromVpidAndPort(quint16 vid, quint
 }
 /*
  *@brief:   打印USB设备详细信息
- *@author:  缪庆瑞
- *@date:    2021.03.15
  *@param:   usbDevice:对应一个usb设备
  */
 void UsbComm::printDevInfo(libusb_device *usbDevice)
@@ -501,8 +467,6 @@ void UsbComm::printDevInfo(libusb_device *usbDevice)
 
 /*
  *@brief:   构造函数
- *@author:  缪庆瑞
- *@date:    2022.02.22
  *@parent:   parent:父对象
  */
 UsbMonitor::UsbMonitor(QObject *parent)
@@ -530,8 +494,6 @@ UsbMonitor::~UsbMonitor()
 }
 /*
  *@brief:   注册热插拔监测服务
- *@author:  缪庆瑞
- *@date:    2022.02.22
  *@param:   deviceClass:监测的设备类
  *@param:   vendorId:监测的设备厂商id
  *@param:   productId:监测的设备产品id
@@ -566,8 +528,6 @@ bool UsbMonitor::registerHotplugMonitorService(int deviceClass, int vendorId, in
 }
 /*
  *@brief:   注销热插拔监测服务
- *@author:  缪庆瑞
- *@date:    2022.02.22
  */
 void UsbMonitor::deregisterHotplugMonitorService()
 {
@@ -589,8 +549,6 @@ void UsbMonitor::deregisterHotplugMonitorService()
  * 也因此回调函数无法直接使用实例对象，但可以通过函参user_data访问实例对象的方法与数据。
  * 注2:该函数内使用user_data发射实例对象的信号，因为信号依附于子线程发射，而槽一般在主线
  * 程，connect默认采用队列连接，确保了该函数只做最小处理，绝不拖泥带水。
- *@author:  缪庆瑞
- *@date:    2022.02.22
  *@param:   ctx:表示libusb的一个会话
  *@param:   device:热插拔的设备
  *@param:   event:热插拔的事件
@@ -620,8 +578,6 @@ int UsbMonitor::hotplugCallback(libusb_context *ctx, libusb_device *device,
 
 /*
  *@brief:   构造函数
- *@author:  缪庆瑞
- *@date:    2021.03.18
  *@param:   context:表示libusb的一个会话
  *@parent:   parent:父对象
  */
@@ -633,8 +589,6 @@ UsbEventHandler::UsbEventHandler(libusb_context *context, QObject *parent)
 }
 /*
  *@brief:   子线程运行
- *@author:  缪庆瑞
- *@date:    2021.03.18
  */
 void UsbEventHandler::run()
 {
