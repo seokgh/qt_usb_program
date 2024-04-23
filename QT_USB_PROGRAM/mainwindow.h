@@ -17,6 +17,17 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+private slots:
+    void on_pushButton_list_usb_devices_clicked();
+
+    void on_pushButton_reset_usb_device_clicked();
+
+    void on_pushButton_hot_plug_monitor_clicked();
+
+    void on_pushButton_read_usb_device_clicked();
+
+    void on_pushButton_write_usb_device_clicked();
+
 private:
     Ui::MainWindow *ui;
 };
