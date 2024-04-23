@@ -1,9 +1,13 @@
 /********************************************************************************/
-/* USB "응용레이어" 통신 파트 (libusb API 에 한층 더 씌워서, 사용 편의성을 높인다) */
+/* USB "응용레이어" 통신 Part (libusb API 에 한층 더 씌워서, 사용 편의성을 높인다) */
 /********************************************************************************/
 #include "usbcomm.h"
 #include <QDebug>
 #include <QCoreApplication>
+
+/********************************************************************************/
+/* Part1: UsbComm */
+/********************************************************************************/
 
 /********************************************************************************/
 /* 생성자 함수，libusb에 대해 초기화작업을 실시한다. */
@@ -15,7 +19,7 @@ UsbComm::UsbComm(QObject *parent)
 
     /* libusb 초기화 */
     int err = libusb_init(&context);
-    if(err != LIBUSB_SUCCESS) {
+    if (err != LIBUSB_SUCCESS) {
         qDebug()<<"libusb_init error:"<<libusb_error_name(err);
     }
 
@@ -39,74 +43,82 @@ UsbComm::~UsbComm()
 void UsbComm::findUsbDevices()
 {
     libusb_device **devs;
-    
+
     /* get device list */
     ssize_t count = libusb_get_device_list(context,&devs);
-    for(int i=0;i<count;i++)
-    {
+
+    for (int i=0;i<count;i++)
         printDevInfo(devs[i]);
-    }
-    
+
     /* */
     libusb_free_device_list(devs,1);
 }
 
 /*
- *@brief:   打开指定的usb设备
- * 注1：该函数通过遍历所有的usb设备列表，进而打开指定的usb设备，并将打开的句柄放到成员列表deviceHandleList中。
- * 其实还有一个便捷函数“libusb_open_device_with_vid_pid()”，它可以方便快速打开指定pid和vid的设备。函数内部实际也是
- * 通过libusb_get_device_list()获取所有设备，然后遍历各个设备的描述符，判断是否有匹配(pid/vid)的设备，如果有则调用
- * libusb_open()打开设备返回句柄，并自动释放设备列表。但官方注释中提示该函数有使用限制，比如多个设备有相同的id，该函数
- * 仅返回第一个设备句柄，所以并不打算在真正的应用程序中使用该函数。
- * 注2：打开设备需要权限，普通用户可能会返回“LIBUSB_ERROR_ACCESS”，可以在udev规则中给指定的usb设备授予读写权限(MODE="0666"),
- * 详情请查询udev规则脚本相关资料
- *@param:   vpidMap:<厂商id,产品id>表
- *@return:   bool:true=成功  false=失败
+ * 지정한 usb device를 open한다
+ *
+ * NOTE:
+ * 1. 이 함수는 all usb device list를 스캔하여, 지정한 장치를 open하여, 그 핸들러를 맴버변수 deviceHandleList 에 집어넣는다.
+ * 	실은 libusb_open_device_with_vid_pid() 라는 함수로도 지정한 vid/pid 로 usb장비를 열수 있다.
+ * 	함수 내에서도 libusb_get_device_list() 로 모든 device 를 취득하여 device descript를 스캔하여, vid/pid로 비교를 진행한다.
+ * 	비교해서 매칭되는 게 있으면 libusb_open() 로 장비를 열고, 핸들러를 반환하고, device list 를 free한다.
+ *
+ * 	하지만
+ * 	libusb-1.0 의 설명을 보면, 이 함수에 제한이 있다:
+ * 	여러개의 device가 같은 id를 사용하면, 첫번째 것 핸들러만 반환한다고 한다... 따라서, 정식 사용에는 패기?
+ *
+ *
+ * 2. usb device를 열려면 권한이 필요하다.
+ * 	일반 user가 열때는 “LIBUSB_ERROR_ACCESS” Error가 반환될 가능성이 높다.
+ * 	이를 해결하려면, udev 규칙 파일에 해당 usb device 에게 r/w 권한(MODE="0666")을 추가해야 한다.
+ *
+ * @param:   vpidMap: <vid, pid> table
+ * @return:  true=OK  false=NG
  */
 bool UsbComm::openUsbDevice(QMultiMap<quint16, quint16> &vpidMap)
 {
-    if(vpidMap.isEmpty())
-    {
+    if (vpidMap.isEmpty()) {
         qDebug()<<"vpidMap is empty";
         return false;
     }
 
-    closeAllUsbDevice();//先关闭所有已打开的设备
+    /* 먼저 모든 이미 열린 device 를 닫는다 */
+    closeAllUsbDevice();
 
     libusb_device **devs;
-    ssize_t count = libusb_get_device_list(context,&devs);//获取设备列表
-    if(count < 0)
-    {
+
+    /* get usb devices list */
+    ssize_t count = libusb_get_device_list(context,&devs);
+    if (count < 0) {
         qDebug()<<"libusb_get_device_list is error";
         return false;
     }
-    for(int i=0;i<count;i++)
-    {
-        //设备(device)
+
+    for (int i=0; i < count; i++) {
+        /* device */
         libusb_device_descriptor deviceDesc;
+
         int err = libusb_get_device_descriptor(devs[i], &deviceDesc);
-        if(err != LIBUSB_SUCCESS)
-        {
+        if (err != LIBUSB_SUCCESS) {
             qDebug()<<"libusb_get_device_descriptor error:"<<libusb_error_name(err);
             continue;
         }
-        //寻找匹配的vid和pid的设备
-        if(vpidMap.uniqueKeys().contains(deviceDesc.idVendor) &&
-                vpidMap.values(deviceDesc.idVendor).contains(deviceDesc.idProduct))
-        {
+
+        /* vid, pid 가 매칭되는 장비를 찾는다 */
+        if (vpidMap.uniqueKeys().contains(deviceDesc.idVendor) &&
+            vpidMap.values(deviceDesc.idVendor).contains(deviceDesc.idProduct)) {
             libusb_device_handle *deviceHandle = NULL;
             int err = libusb_open(devs[i], &deviceHandle);
-            if (err != LIBUSB_SUCCESS)
-            {
+            if (err != LIBUSB_SUCCESS) {
                 qDebug()<<"libusb_open error:"<<libusb_error_name(err);
-            }
-            else
-            {
+            } else {
                 deviceHandleList.append(deviceHandle);
             }
         }
     }
-    libusb_free_device_list(devs,1);//释放设备列表(解引用)
+
+    /* free device list */
+    libusb_free_device_list(devs, 1);
 
     return (bool)deviceHandleList.size();
 }
@@ -116,11 +128,11 @@ bool UsbComm::openUsbDevice(QMultiMap<quint16, quint16> &vpidMap)
 /********************************************************************************/
 void UsbComm::closeUsbDevice(libusb_device_handle *deviceHandle)
 {
-    //释放设备声明的所有接口
-    releaseUsbInterface(deviceHandle,-1);
-    //关闭打开的设备
-    if(deviceHandleList.contains(deviceHandle))
-    {
+    /* device 의 모든 interface 를 free한다 */
+    releaseUsbInterface(deviceHandle, -1);
+
+    /* open 된 device 를 닫는다 */
+    if (deviceHandleList.contains(deviceHandle)) {
         libusb_close(deviceHandle);
         deviceHandleList.removeAll(deviceHandle);
     }
@@ -131,35 +143,35 @@ void UsbComm::closeUsbDevice(libusb_device_handle *deviceHandle)
 /********************************************************************************/
 void UsbComm::closeAllUsbDevice()
 {
-    for(int i=0;i<deviceHandleList.size();i++)
-    {
+    for (int i=0; i < deviceHandleList.size(); i++)
         closeUsbDevice(deviceHandleList.at(i));
-    }
 }
+
 /*
- *@brief:   激活usb设备当前配置(通常对于只有一个配置的设备，默认已经激活，无需调用)
- *@param:   deviceHandle:设备句柄
- *@param:   bConfigurationValue:配置号
- *@return:   bool:true=成功  false=失败
+ *usb device 의 현재 config 를 활성화한다 (config가 1개인 usb device 는 default로 활성화되므로 호출안해도 된다)
+ *@param:   deviceHandle: device handle
+ *@param:   bConfigurationValue: config num
+ *@return:  bool:true=OK  false=NG
  */
 bool UsbComm::setUsbConfig(libusb_device_handle *deviceHandle, int bConfigurationValue)
 {
-    if(!deviceHandleList.contains(deviceHandle))
-    {
+    if (!deviceHandleList.contains(deviceHandle)) {
         return false;
     }
-    /*激活指定的配置(一个设备可能有多个配置，但同一时刻只能激活1个)
-     *可以通过libusb_get_configuration()获取当前激活的配置值(默认为1)，如果选择的配置已经激活，那么此调用将
-     *会是一个轻量级的操作，用来重置相关usb设备的状态。
+
+    /* 지정 config 를 활성화한다
+     * (1개 USB Device 에는 config 가 여러개 있을 수 있지만, 동일시각에 1개만 활성화 할 수 있다)
+     * libusb_get_configuration() 로 현재 활성화된 config index? (default: 1)를 가져올 수 있다.
+     * 만약 지정한 config 가 현재와 같으면 "가벼운"동작(USB device 상태 재설정?)으로 끝난다.
      */
     int err = libusb_set_configuration(deviceHandle,bConfigurationValue);
-    if(err != LIBUSB_SUCCESS)
-    {
+    if (err != LIBUSB_SUCCESS) {
         qDebug()<<"libusb_set_configuration error:"<<libusb_error_name(err);
         return false;
     }
     return true;
 }
+
 /*
  *@brief:   声明usb设备接口
  * 在操作I/O或其他端点的时候必须先声明接口，接口声明用于告知底层操作系统你的程序想要取得此接口的所有权。
@@ -266,7 +278,7 @@ bool UsbComm::setUsbInterfaceAltSetting(libusb_device_handle *deviceHandle, int 
     }
     //设备接口未声明
     if(!handleClaimedInterfacesMap.contains(deviceHandle) ||
-            !handleClaimedInterfacesMap.value(deviceHandle).contains(interfaceNumber))
+        !handleClaimedInterfacesMap.value(deviceHandle).contains(interfaceNumber))
     {
         return false;
     }
@@ -411,10 +423,10 @@ void UsbComm::printDevInfo(libusb_device *usbDevice)
         qDebug()<<"libusb_get_device_descriptor error:"<<libusb_error_name(err);
         return;
     }
-//    if(!(deviceDesc.idVendor == 0x04b4 && deviceDesc.idProduct == 0x00f1))
-//    {
-//        return;
-//    }
+    //    if(!(deviceDesc.idVendor == 0x04b4 && deviceDesc.idProduct == 0x00f1))
+    //    {
+    //        return;
+    //    }
     qDebug()<<"***************************************";
     qDebug()<<"Bus: "<<(int)libusb_get_bus_number(usbDevice);//设备所在总线
     qDebug()<<"Device Address: "<<(int)libusb_get_device_address(usbDevice);//设备在总线上的地址
@@ -446,7 +458,7 @@ void UsbComm::printDevInfo(libusb_device *usbDevice)
                 const libusb_interface_descriptor *interfaceDesc;
                 interfaceDesc = &usbInterface->altsetting[k];
                 qDebug()<<"\t\tInterface Class: "<<
-                          QString("0x%1").arg((int)interfaceDesc->bInterfaceClass,2,16,QChar('0'));//接口类
+                    QString("0x%1").arg((int)interfaceDesc->bInterfaceClass,2,16,QChar('0'));//接口类
                 qDebug()<<"\t\tInterface Number: "<<(int)interfaceDesc->bInterfaceNumber;
                 qDebug()<<"\t\tAlternate settings: "<<(int)interfaceDesc->bAlternateSetting;
                 qDebug()<<"\t\tNumber of endpoints: "<<(int)interfaceDesc->bNumEndpoints;
@@ -457,9 +469,9 @@ void UsbComm::printDevInfo(libusb_device *usbDevice)
                     const libusb_endpoint_descriptor *endpointDesc;
                     endpointDesc = &interfaceDesc->endpoint[m];
                     qDebug()<<"\t\t\tEP address: "<<
-                              QString("0x%1").arg((int)endpointDesc->bEndpointAddress,2,16,QChar('0'));
+                        QString("0x%1").arg((int)endpointDesc->bEndpointAddress,2,16,QChar('0'));
                     qDebug()<<"\t\t\tEP transfer type:"<<
-                              (endpointDesc->bmAttributes&0x03);//端点传输类型，详见enum libusb_transfer_type{}
+                        (endpointDesc->bmAttributes&0x03);//端点传输类型，详见enum libusb_transfer_type{}
                 }
             }
         }
@@ -468,33 +480,46 @@ void UsbComm::printDevInfo(libusb_device *usbDevice)
     qDebug()<<"***************************************";
 }
 
+
+
+
+/********************************************************************************/
+/* Part2: UsbMonitor */
+/********************************************************************************/
 /*
- *@brief:   构造函数
- *@parent:   parent:父对象
+ * 생성자
  */
-UsbMonitor::UsbMonitor(QObject *parent)
-    :QObject(parent)
+UsbMonitor::UsbMonitor(QObject *parent) :QObject(parent)
 {
-    //成员变量初始化
+    /* 맴버변수 초기화 */
     context = NULL;
     hotplugHandle = -1;
     hotplugEventHandler = NULL;
-    //libusb初始化
+
+    /* libusb 초기화 */
     int err = libusb_init(&context);
-    if(err != LIBUSB_SUCCESS)
-    {
+    if (err != LIBUSB_SUCCESS) {
         qDebug()<<"libusb_init error:"<<libusb_error_name(err);
     }
-    //设置日志输出等级
-    libusb_set_debug(context,LIBUSB_LOG_LEVEL_WARNING);//旧版本
-    //libusb_set_option(context,LIBUSB_OPTION_LOG_LEVEL,LIBUSB_LOG_LEVEL_WARNING);//新版本
+
+    /* log level 설정 */
+    libusb_set_debug(context, LIBUSB_LOG_LEVEL_WARNING);	//old
+    //libusb_set_option(context, LIBUSB_OPTION_LOG_LEVEL,LIBUSB_LOG_LEVEL_WARNING);	//new
 }
 
+/*
+ * 소멸자
+ */
 UsbMonitor::~UsbMonitor()
 {
-    deregisterHotplugMonitorService();//注销热插拔服务
-    libusb_exit(context);//libusb退出
+    /* hot plug 서비스 등록 해제 */
+    deregisterHotplugMonitorService();
+
+    /* libusb 종료 */
+    libusb_exit(context);
 }
+
+
 /*
  *@brief:   注册热插拔监测服务
  *@param:   deviceClass:监测的设备类
@@ -512,8 +537,8 @@ bool UsbMonitor::registerHotplugMonitorService(int deviceClass, int vendorId, in
     }
     //注册热插拔的回调函数
     int err = libusb_hotplug_register_callback(
-                context, (libusb_hotplug_event)(LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED|LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT),
-                LIBUSB_HOTPLUG_NO_FLAGS, vendorId,productId, deviceClass,hotplugCallback,(void *)this, &hotplugHandle);
+        context, (libusb_hotplug_event)(LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED|LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT),
+        LIBUSB_HOTPLUG_NO_FLAGS, vendorId,productId, deviceClass,hotplugCallback,(void *)this, &hotplugHandle);
     if(err != LIBUSB_SUCCESS)
     {
         qDebug()<<"libusb_hotplug_register_callback error:"<<libusb_error_name(err);
@@ -529,6 +554,7 @@ bool UsbMonitor::registerHotplugMonitorService(int deviceClass, int vendorId, in
 
     return true;
 }
+
 /*
  *@brief:   注销热插拔监测服务
  */
@@ -560,29 +586,29 @@ void UsbMonitor::deregisterHotplugMonitorService()
  *@return:   int:当返回值为1时，则会撤销注册(deregistered)
  */
 int UsbMonitor::hotplugCallback(libusb_context *ctx, libusb_device *device,
-                             libusb_hotplug_event event, void *user_data)
+                                libusb_hotplug_event event, void *user_data)
 {
     Q_UNUSED(ctx)
     Q_UNUSED(device)
-    //强制转换成注册热插拔监测的实例对象指针
+
+    /* 강제로 hot plug 감시하는 object 로 캐스팅  */
     UsbMonitor *tmpUsbMonitor = (UsbMonitor*)user_data;
-    //设备插入
-    if(event == LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED)
-    {
+
+    /* usb 삽입 */
+    if(event == LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED) {
         emit tmpUsbMonitor->deviceHotplugSig(true);
-    }
-    //设备拔出
-    else
-    {
+    } else {
+        /* usb 제거 */
         emit tmpUsbMonitor->deviceHotplugSig(false);
     }
+
     return 0;
 }
 
 /*
- *@brief:   构造函数
- *@param:   context:表示libusb的一个会话
- *@parent:   parent:父对象
+ *@brief:	생성자함수
+ *@param:	context: libusb 회화 세션
+ *@parent:	parent:
  */
 UsbEventHandler::UsbEventHandler(libusb_context *context, QObject *parent)
     :QThread(parent)
@@ -590,25 +616,28 @@ UsbEventHandler::UsbEventHandler(libusb_context *context, QObject *parent)
     this->context = context;
     this->stopped = false;
 }
+
 /*
- *@brief:   子线程运行
+ * Sub thread
  */
 void UsbEventHandler::run()
 {
-    //超时时间 100ms
+    /* timeout: 100 ms */
     struct timeval tv;
     tv.tv_sec = 0;
     tv.tv_usec = 100000;
 
-    while(!this->stopped && context != NULL)
-    {
+    while(!this->stopped && context != NULL) {
         //qDebug()<<"libusb_handle_events().......";
-        /* 处理挂起的事件，非阻塞，超时即返回
-         * 最开始使用的是libusb_handle_events()阻塞操作，但该阻塞会导致线程无法正常结束，
-         * 调用terminate()强制结束后执行wait操作会卡死，怀疑是该阻塞操作会陷入内核态，导
-         * 致在用户态下强制终止线程失败。
-         * 注:如果有挂起的热插拔事件，注册的回调函数会在该线程内被调用。
+        /* pending중인 이벤트를 처리한다. blocking되지 않고 timeout되면 즉시 return한다.
+         * 처음에는 libusb_handle_events()로 블로킹 방식으로 작업을 수행했지만, 블로킹으로 인해 Thread가 제대로 종료되지 않았다.
+         * terminate()를 호출하여 강제로 종료한 후에 wait 작업을 실행하면 정지...
+         *
+         * 블로킹 작업이 kernel모드로 빠져서 user모드에서 thread를 강제로 종료할 수 없게 되는 것으로 의심.
+         *
+         * 참고:
+         * 		pending중인 핫플러그 이벤트가 있으면 등록된 콜백 함수가 이 thread 내에서 호출된다.
          */
-        libusb_handle_events_timeout_completed(context,&tv,NULL);
+        libusb_handle_events_timeout_completed(context, &tv, NULL);
     }
 }

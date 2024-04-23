@@ -22,14 +22,14 @@
         <item>
          <widget class="QPushButton" name="pushButton_list_usb_devices">
           <property name="text">
-           <string>list devices</string>
+           <string>list usb devices</string>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QPushButton" name="pushButton_reset_usb_device">
           <property name="text">
-           <string>reset device</string>
+           <string>reset usb device</string>
           </property>
          </widget>
         </item>
@@ -50,7 +50,7 @@
         <item>
          <widget class="QPushButton" name="pushButton_read_usb_device">
           <property name="text">
-           <string>read device</string>
+           <string>read usb device</string>
           </property>
          </widget>
         </item>
@@ -65,7 +65,7 @@
           <item>
            <widget class="QPushButton" name="pushButton_write_usb_device">
             <property name="text">
-             <string>write device</string>
+             <string>write usb device</string>
             </property>
            </widget>
           </item>
