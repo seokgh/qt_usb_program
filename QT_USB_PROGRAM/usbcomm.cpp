@@ -29,23 +29,26 @@ UsbComm::UsbComm(QObject *parent)
 /********************************************************************************/
 UsbComm::~UsbComm()
 {
-    //关闭所有打开的设备
     closeAllUsbDevice();
-    libusb_exit(context);//libusb退出
+    libusb_exit(context);
 }
 
 /*
- *@brief:   探测系统当前接入的usb设备，打印设备详细信息(调试用)
+ * 현재 접속된 USB device 를 탐색하여, device 정보를 출력
  */
 void UsbComm::findUsbDevices()
 {
     libusb_device **devs;
-    ssize_t count = libusb_get_device_list(context,&devs);//获取设备列表
+    
+    /* get device list */
+    ssize_t count = libusb_get_device_list(context,&devs);
     for(int i=0;i<count;i++)
     {
-        printDevInfo(devs[i]);//打印设备详情
+        printDevInfo(devs[i]);
     }
-    libusb_free_device_list(devs,1);//释放设备列表(解引用)
+    
+    /* */
+    libusb_free_device_list(devs,1);
 }
 
 /*
