@@ -79,9 +79,14 @@ public:
     /* 현재 open된 디바이스 수량 취득 */
     int getOpenedDeviceCount(){return deviceHandleList.size();}
 
-    /*该类中所有方法的函参(libusb_device_handle *deviceHandle)必须通过以下getDeviceHandleFrom*方法获取*/
-    libusb_device_handle *getDeviceHandleFromIndex(int index);//通过索引获取打开的设备句柄
-    libusb_device_handle *getDeviceHandleFromVpidAndPort(quint16 vid,quint16 pid,qint16 port);//通过vpid和端口号获取打开的设备句柄
+    /********************************************************************************/
+    /* 이 클래스의 모든 메서드에서 매개변수(libusb_device_handle deviceHandle)는 다음의 getDeviceHandleFrom_xxx 메서드를 사용하여 가져와야 합니다. */
+    /********************************************************************************/
+    /* index 를 통하여 open 된 device handle 취득 */
+    libusb_device_handle *getDeviceHandleFromIndex(int index);
+
+    /* vid, pid와 port번호로 open 된 device handle 취득 */
+    libusb_device_handle *getDeviceHandleFromVpidAndPort(quint16 vid,quint16 pid,qint16 port);
 
 private:
     /* usb device 정보 출력 */
@@ -134,12 +139,14 @@ private:
 
     /* libusb의 하나의 "회화세션", libusb_init() 생성자 함수가 신규 */
     libusb_context *context;
-    //热插拔回调句柄
+    /* hot plug callback handle */
     libusb_hotplug_callback_handle hotplugHandle;
-    //热插拔事件处理对象
+    /* hot plug event의 처리 */
     UsbEventHandler *hotplugEventHandler;
 
 };
+
+
 
 /********************************************************************************/
 /* USB event 처리 Class */
