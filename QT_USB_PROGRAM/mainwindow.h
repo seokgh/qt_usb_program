@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <usbcomm.h>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -16,6 +17,9 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+
+    /* */
+    UsbComm		m_usbComm;
 
 private slots:
     void on_pushButton_list_usb_devices_clicked();

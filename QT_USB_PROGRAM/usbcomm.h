@@ -92,8 +92,9 @@ private:
     /* usb device 정보 출력 */
     void printDevInfo(libusb_device *usbDevice);
 
-    /* libusb의 하나의 "회화세션", libusb_init() 생성자함수가 신규 */
+    /* libusb의 하나의 "회화세션", libusb_init() 생성자 함수가 신규 */
     libusb_context *context;
+
     /* open된 usb device handle list */
     QList<libusb_device_handle *> deviceHandleList;
 
