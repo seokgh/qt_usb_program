@@ -27,7 +27,11 @@
          </widget>
         </item>
         <item>
-         <widget class="QListView" name="listView_vid_pid_list"/>
+         <widget class="QListView" name="listView_vid_pid_list">
+          <property name="editTriggers">
+           <set>QAbstractItemView::NoEditTriggers</set>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QPushButton" name="pushButton_reset_usb_device">
