@@ -27,6 +27,17 @@
          </widget>
         </item>
         <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <item>
+           <widget class="QLabel" name="label_title_vid_pid">
+            <property name="text">
+             <string>VID,         PID</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
          <widget class="QListView" name="listView_vid_pid_list">
           <property name="editTriggers">
            <set>QAbstractItemView::NoEditTriggers</set>

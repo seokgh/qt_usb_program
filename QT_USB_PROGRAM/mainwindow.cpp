@@ -87,7 +87,7 @@ void MainWindow::slotGetDevInfoFromLibusb(QString vid, QString pid)
     qDebug() << Q_FUNC_INFO << "VID:" << vid << "PID:" << pid;
 
     /* 누적 추가한다 */
-    m_dataList_of_vid_pid_list << "VID:" + vid + ", " + "PID:" + pid;
+    m_dataList_of_vid_pid_list << vid + ", " + pid;
 
     m_model_of_vid_pid_list.setStringList(m_dataList_of_vid_pid_list);
 }
