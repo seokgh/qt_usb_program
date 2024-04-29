@@ -422,14 +422,26 @@ void UsbComm::printDevInfo(libusb_device *usbDevice)
     //        return;
     // }
 
+    QString vid, pid;
+
     qDebug() << "********************************************************************************";
     qDebug() << "Bus: "<<(int)libusb_get_bus_number(usbDevice);						/* 현재 bus */
     qDebug() << "Device Address: " <<(int)libusb_get_device_address(usbDevice);				/* bus 에서의 주소 */
     qDebug() << "Device Port: " <<(int)libusb_get_port_number(usbDevice);					/* device end point number */
     qDebug() << "Device Speed: " <<(int)libusb_get_device_speed(usbDevice);					/* device 속도, 자세하게는 enum libusb_speed {} */
     qDebug() << "Device Class: " <<QString("0x%1").arg((int)deviceDesc.bDeviceClass, 2, 16, QChar('0'));	/* device class */
-    qDebug() << "VendorID: " << QString("0x%1").arg((int)deviceDesc.idVendor, 4, 16, QChar('0'));		/* VID */
-    qDebug() << "ProductID: " <<QString("0x%1").arg((int)deviceDesc.idProduct, 4, 16, QChar('0'));		/* PID */
+
+    vid = QString("0x%1").arg((int)deviceDesc.idVendor, 4, 16, QChar('0'));		/* VID */
+    pid = QString("0x%1").arg((int)deviceDesc.idProduct, 4, 16, QChar('0'));	/* PID */
+
+    qDebug() << "VendorID = " << vid;		/* VID */
+    qDebug() << "ProductID = " << pid;		/* PID */
+
+    /********************************************************************************/
+    /* Main Window 로 vid/pid 를 signal 로 보낸다 */
+    /********************************************************************************/
+    emit sigPutDevInfo2MainUI(vid, pid);
+
     qDebug() << "Number of configurations: " <<(int)deviceDesc.bNumConfigurations;				/* configuration 개수 */
 
     /* configuration */

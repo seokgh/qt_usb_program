@@ -27,7 +27,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QListView" name="listView"/>
+         <widget class="QListView" name="listView_vid_pid_list"/>
         </item>
         <item>
          <widget class="QPushButton" name="pushButton_reset_usb_device">
@@ -55,12 +55,12 @@
          </widget>
         </item>
         <item>
-         <widget class="QTextBrowser" name="textBrowser"/>
+         <widget class="QTextBrowser" name="textBrowser_read_values"/>
         </item>
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_3">
           <item>
-           <widget class="QPlainTextEdit" name="plainTextEdit"/>
+           <widget class="QPlainTextEdit" name="plainTextEdit_write_cmd"/>
           </item>
           <item>
            <widget class="QPushButton" name="pushButton_write_usb_device">

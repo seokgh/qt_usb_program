@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <usbcomm.h>
+#include <QStringListModel>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -21,6 +22,9 @@ public:
     /* */
     UsbComm		m_usbComm;
 
+public slots:
+    void slotGetDevInfoFromLibusb(QString vid, QString pid);
+
 private slots:
     void on_pushButton_list_usb_devices_clicked();
 
@@ -34,5 +38,8 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+
+    QStringListModel	m_model_of_vid_pid_list;
+    QStringList			m_dataList_of_vid_pid_list;
 };
 #endif // MAINWINDOW_H

@@ -100,6 +100,10 @@ private:
 
     /* handle 과 해당interface list들의 map */
     QMap<libusb_device_handle *, QList<int> > handleClaimedInterfacesMap;
+
+
+signals:
+    void sigPutDevInfo2MainUI(QString vid, QString pid);
 };
 
 
