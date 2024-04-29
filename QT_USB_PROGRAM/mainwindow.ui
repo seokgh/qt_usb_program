@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>835</width>
-    <height>600</height>
+    <width>871</width>
+    <height>434</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -27,6 +27,9 @@
          </widget>
         </item>
         <item>
+         <widget class="QListView" name="listView"/>
+        </item>
+        <item>
          <widget class="QPushButton" name="pushButton_reset_usb_device">
           <property name="text">
            <string>reset usb device</string>
@@ -39,9 +42,6 @@
            <string>hotplug monitor</string>
           </property>
          </widget>
-        </item>
-        <item>
-         <widget class="QListView" name="listView"/>
         </item>
        </layout>
       </item>
@@ -82,7 +82,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>835</width>
+     <width>871</width>
      <height>22</height>
     </rect>
    </property>
